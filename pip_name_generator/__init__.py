@@ -4,6 +4,11 @@ from __future__ import annotations
 import re
 from typing import List, Any
 
+try:
+    import requests
+except ImportError:
+    requests = None
+
 # Simulated PyPI registry to avoid network calls in this offline/demo package.
 # Names in this set are considered "taken" (i.e., not available).
 _MOCK_PYPI_TAKEN = {"existing_name", "taken_package"}
@@ -26,12 +31,36 @@ def _sanitize_name(raw: str) -> str:
 
 def _is_name_available(name: str) -> bool:
     """
-    Simulated availability check: treat names in the mock registry as taken;
-    everything else as available. No real network calls are performed.
+    Check if a package name is available on PyPI by making a real API request.
+    
+    Makes a GET request to PyPI's JSON API to check if the package exists.
+    Returns True if the name is available (404 response), False if taken (200 response).
+    Falls back to False for network errors to be conservative.
     """
     if not name:
         return False
-    return name not in _MOCK_PYPI_TAKEN  # type: ignore
+    
+    # If requests is not available, fall back to mock behavior
+    if requests is None:
+        return name not in _MOCK_PYPI_TAKEN
+    
+    try:
+        # Use PyPI JSON API to check if package exists
+        url = f"https://pypi.org/pypi/{name}/json"
+        response = requests.get(url, timeout=10)
+        
+        # Package exists if we get a 200 status code
+        if response.status_code == 200:
+            return False  # Name is taken
+        elif response.status_code == 404:
+            return True   # Name is available
+        else:
+            # For other status codes, be conservative and assume unavailable
+            return False
+            
+    except (requests.RequestException, Exception):
+        # Network error or other exception - be conservative and assume unavailable
+        return False
 
 
 def _default_candidates(custom_text: str) -> List[str]:

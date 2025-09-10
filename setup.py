@@ -20,7 +20,7 @@ setup(
     long_description_content_type="text/markdown",
     url="https://github.com/chigwell/pip_name_generator",
     packages=find_packages(),
-    install_requires=[],
+    install_requires=["requests>=2.20.0"],
     classifiers=[
         "License :: OSI Approved :: MIT License",
         "Development Status :: 3 - Alpha",

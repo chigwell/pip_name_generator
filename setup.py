@@ -12,7 +12,7 @@ except Exception:
 
 setup(
     name="pip_name_generator",
-    version="2025.9.101312",
+    version="2025.9.101449",
     author="Eugene Evstafev",
     author_email="hi@eugene.plus",
     description="",
@@ -20,7 +20,7 @@ setup(
     long_description_content_type="text/markdown",
     url="https://github.com/chigwell/pip_name_generator",
     packages=find_packages(),
-    install_requires=["requests>=2.20.0"],
+    install_requires=["requests>=2.20.0", "langchain_llm7", "llmatch_messages", "langchain_core"],
     classifiers=[
         "License :: OSI Approved :: MIT License",
         "Development Status :: 3 - Alpha",

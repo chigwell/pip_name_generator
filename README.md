@@ -21,12 +21,15 @@ Here's an example of how to utilize `pip_name_generator` to generate an availabl
 
 ```python
 from pip_name_generator import generate_available_package_name
+from langchain_llm7 import ChatLLM7
 
 # Example description
 description = "Data analysis toolkit"
 
+llm = ChatLLM7(model="qwen2.5-coder-32b-instruct", base_url="https://api.llm7.io/v1")
+
 # Generate a package name
-name = generate_available_package_name(description, llm=None)
+name = generate_available_package_name(description, llm=llm)
 
 print(f"Suggested package name: {name}")
 ```

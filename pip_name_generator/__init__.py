@@ -4,6 +4,12 @@ from __future__ import annotations
 import re
 from typing import List, Any
 
+from llmatch_messages import llmatch
+from langchain_llm7 import ChatLLM7
+from langchain_core.language_models import BaseChatModel
+from langchain_core.messages import SystemMessage, HumanMessage
+
+
 try:
     import requests
 except ImportError:
@@ -93,34 +99,46 @@ def _generate_candidates_from_llm(custom_text: str, llm: Any) -> List[str]:
     Falls back to deterministic defaults if signals are unavailable.
     """
     if llm is not None:
-        mock = getattr(llm, "mock_names", None)
-        if isinstance(mock, list) and mock:
-            seen = set()
-            out: List[str] = []
-            for raw in mock[:10]:
-                s = _sanitize_name(str(raw))
-                if s and s not in seen:
-                    seen.add(s)
-                    out.append(s)
-            if out:
-                return out
+        system = SystemMessage(
+            content=(
+                "You are a naming assistant. Generate exactly 10 creative, relevant, and "
+                "PyPI-compliant package names based on the user's description.\n"
+                "Rules:\n"
+                "- lowercase only\n- underscores instead of spaces\n- no special characters\n"
+                "Output ONLY in this XML form:\n"
+                "<names>\n"
+                "  <name>example_one</name>\n"
+                "  <name>example_two</name>\n"
+                "  ... (8 more)\n"
+                "</names>"
+            )
+        )
 
-        gen = getattr(llm, "generate_candidates", None)
-        if callable(gen):
-            try:
-                out = gen(custom_text)
-                if isinstance(out, list):
-                    seen = set()
-                    res: List[str] = []
-                    for raw in out[:10]:
-                        s = _sanitize_name(str(raw))
-                        if s and s not in seen:
-                            seen.add(s)
-                            res.append(s)
-                    if res:
-                        return res
-            except Exception:
-                pass
+        human_content = (
+            "Source/package description (custom_text):\n"
+            f"{custom_text}\n\n"
+            "Return ONLY XML as specified. No comments or additional text."
+        )
+        human = HumanMessage(content=human_content)
+
+        # Constrain to allowed chars to avoid post-cleaning surprises.
+        pattern = r"<name>\s*([a-z0-9_]+)\s*</name>"
+
+        response = llmatch(
+            llm=llm,
+            messages=[system, human],
+            pattern=pattern,
+            verbose=True,
+        )
+
+        if not (isinstance(response, dict) and response.get("success")):
+            raise RuntimeError("Name generation failed via llmatch/ChatLLM7.")
+
+        extracted: List[str] = response.get("extracted_data") or []
+        if not extracted:
+            raise RuntimeError("No <name> elements extracted from LLM response.")
+
+        return extracted
 
     return _default_candidates(custom_text)
 
